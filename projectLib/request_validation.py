@@ -1,7 +1,7 @@
 import pandas as pd
-from .constants import ID, LOGIN, SALARY
+from .constants import ID, LOGIN, SALARY, NAME, USERS_REQ_LIMIT
 from .utils import readEmpCSVData
-from marshmallow import fields, Schema, validates, ValidationError
+from marshmallow import fields, Schema, validates, ValidationError, validates_schema
 
 def validateEmpData(df):
     if type(df) == str:
@@ -26,35 +26,65 @@ def validateEmpData(df):
     if len(dframe[dframe[SALARY] <= 0]):
         return False, "Data contains negative salaries"
 
+    validColumns = [ID, LOGIN, SALARY, NAME]
+    if not all(map(lambda x : x in validColumns, dframe.columns)):
+        return False, "Data contains extra unwanted fields"
+
+    if not all(map(lambda x : x in dframe.columns, validColumns)):
+        return False, "Data contains insufficient fields"
+
     return True, "Data is clean"
 
 class getUserEndpt_ReqValidator(Schema):
-    name = fields.String(required=True)
-    age = fields.Integer(
-        required=True, 
-        error_messages={"required": "Age is required."}
-        )
-    city = fields.String(
-        required=True,
-        error_messages={"required": {"message": "City required", "code": 400}},
-    )
-    email = fields.Email(required=True)
+    minSalary = fields.Float(required=True)
+    maxSalary = fields.Float(required=True)
+    offset = fields.Int(required=True)
+    limit = fields.Int(required=True)
+    sort = fields.Str(required=True)
 
-    @validates("city")
-    def validate_quantity(self, value):
-        if "a" not in value:
-            raise ValidationError("City must contain the letter 'a'")
+    @validates("sort")
+    def validate_sort(self, value):
+        validKeys = [ID, LOGIN, SALARY, NAME]
+
+        if "-" not in value and "+" not in value:
+            print(value)
+            raise ValidationError("Sort order must be provided")
+        elif value.strip("+") not in validKeys and \
+                value.strip("-") not in validKeys:
+            raise ValidationError("Invalid sort key")
+    
+    @validates("limit")
+    def validate_limit(self, numRequestedUsers):
+        if numRequestedUsers > USERS_REQ_LIMIT:
+            raise ValidationError("limit cannot be greater than 30")
+
+
+    @validates_schema
+    def validate_quantity(self, data, **kwargs):
+        if data['maxSalary'] < data['minSalary']:
+            raise ValidationError("maxSalary cannot be less than minSalary")
+
 
 if __name__ == "__main__":
     try:
-        # result = UserSchema().load({"email": "foo@bar.com"})
-        val = UserSchema().validate({"email": "foo@bar.com", "city":"citt"})
+        result = getUserEndpt_ReqValidator().load(
+            {
+                "minSalary":1,
+                "maxSalary":10,
+                "offset":0,
+                "limit":30,
+                "sort":"+name"
+            }
+            )
+        # val = getUserEndpt_ReqValidator().validate(
+        #     {"minSalary":"l"}
+        #     )
         print("Success")
-        # print(result)
-        print(val)
+        print(result)
+        # print(val)
 
     except ValidationError as err:
         print(err.messages)
         print("Validation Error")
-    except:
-        print("error")
+    # except:
+    #     print("error")
