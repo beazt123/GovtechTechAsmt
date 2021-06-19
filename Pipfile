@@ -1,0 +1,23 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+flask = "*"
+flask-pymongo = "*"
+flask-marshmallow = "*"
+flask-testing = "*"
+coverage = "*"
+mongomock = "*"
+numpy = "*"
+pandas = "*"
+dnspython = "*"
+pymongo = {extras = ["tls"], version = "*"}
+certifi = "*"
+python-dotenv = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"
